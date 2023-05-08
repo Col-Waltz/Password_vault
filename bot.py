@@ -23,12 +23,16 @@ class Delete(StatesGroup):
     input = State()
     choise = State()
 
+class Settime(StatesGroup):
+    input = State()
+
 storage = MemoryStorage()
 
 mytoken = '6079387099:AAF_KWTYyYOp6NDJ7pv6Bn6zirlrqQ71Amc'
 bot = Bot(token = mytoken)
 dp = Dispatcher(bot = bot, storage = storage)
 Users={} #{'user_id': {'Service_name': ['login','password']}}
+exp_time = 60
 entertext='В главном меню доступны команды: \
     \n /set - добавление или изменение логина и пароля по названию сервиса\
     \n /get - получение логина и пароля по названию сервиса\
@@ -123,7 +127,7 @@ async def output(message: types.Message,state: FSMContext):
     org_name = message.text
     if org_name in Users[user_id].keys():
         message = await message.answer(f"Логин:{Users.get(user_id).get(org_name)[0]} \n Пароль:{Users.get(user_id).get(org_name)[1]} \n Это сообщение будет удалено в течение минуты, скопируйте логин и пароль в буфер обмена")
-        asyncio.create_task(delete_message(message, 60))
+        asyncio.create_task(delete_message(message, exp_time))
     else:
         await message.answer('Сохраненного пароля для такого сервиса не существует, попробуйте использовать /all, чтобы узнать все сервисы, пароли от которых сохранены')
     await state.finish()
@@ -175,6 +179,18 @@ async def check_tuples(message: types.Message, state: FSMContext):
 @dp.message_handler(commands = ['help'])
 async def set_new_service(message: types.Message):
     await message.answer(entertext)
+
+@dp.message_handler(commands = ['set_exp_time'], state=None)
+async def set_new_service(message: types.Message, state: FSMContext):
+    await message.answer('Введите время видимости сообщения с паролем в секундах')
+    await Settime.input.set()
+
+@dp.message_handler(state=Settime.input)
+async def set_new_service(message: types.Message, state: FSMContext):
+    text = message.text 
+
+
+
 
 if __name__ == '__main__':
     executor.start_polling(dp, skip_updates=True)

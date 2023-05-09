@@ -10,7 +10,7 @@ def new_user(user_id):
         return False
         
 def add_new_user(user_id):
-    Users[user_id]={}
+    Users[user_id] = {}
 
 def org_name_check(user_id,org_name):
     if org_name in Users.get(user_id):

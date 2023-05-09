@@ -52,7 +52,7 @@ def pop_data(user_id,data):
 
 def get_all_orgs(user_id):
     crsr.execute('SELECT org_name FROM Users WHERE user_id = \n'+str(user_id)+'\n')
-    orgs=[]
+    orgs = []
     res = crsr.fetchall()
     for typle in res:
         orgs.append(typle[0])

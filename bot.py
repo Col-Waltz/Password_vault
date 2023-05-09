@@ -109,7 +109,7 @@ async def set_new_tuple(message: types.Message, state: FSMContext):
     if answer in ['Сброс','сброс']:
         await message.answer('Возврат в главное меню')
         await state.finish()
-    else:
+    elif answer not in ['Подтвердить','подтвердить','Сброс','сброс']:
         await message.answer('Ошибка, подтвердите сохранение логина и пароля')
 
 @dp.message_handler(commands = ['get'], state = None)
@@ -165,7 +165,7 @@ async def delete_confirmation(message: types.Message, state: FSMContext):
     if answer in ['Нет','нет']:
         await message.answer('Данные сохранены')
         await state.finish()
-    else:
+    elif answer not in ['Да','да','Нет','нет']:
         await message.answer('Ошибка, подтвердите удаление логина и пароля Да/Нет')
 
 @dp.message_handler(commands = ['all'])

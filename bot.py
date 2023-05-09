@@ -1,5 +1,6 @@
 import time
 import logging
+from storage_python import new_user,add_new_user,org_name_check,push_data,storage_empty,get_login,get_password,pop_data,get_all_orgs
 
 import asyncio
 from contextlib import suppress
@@ -23,16 +24,12 @@ class Delete(StatesGroup):
     input = State()
     choise = State()
 
-class Settime(StatesGroup):
-    input = State()
-
 storage = MemoryStorage()
 
 mytoken = '6079387099:AAF_KWTYyYOp6NDJ7pv6Bn6zirlrqQ71Amc'
 bot = Bot(token = mytoken)
 dp = Dispatcher(bot = bot, storage = storage)
-Users={} #{'user_id': {'Service_name': ['login','password']}}
-exp_time = 60
+
 entertext='В главном меню доступны команды: \
     \n /set - добавление или изменение логина и пароля по названию сервиса\
     \n /get - получение логина и пароля по названию сервиса\
@@ -50,8 +47,8 @@ async def start_handler(message: types.Message):
     user_id = message.from_user.id
     username = message.from_user.full_name
     logging.info(f'{user_id}{username}{time.asctime()}')
-    if user_id not in Users:
-        Users[user_id]={}
+    if new_user(user_id):
+        add_new_user(user_id)
         await message.answer(f'Здравствуйте, {username}!')
     else:
         await message.answer(f'С возвращением, {username}!')
@@ -66,7 +63,7 @@ async def set_new_service(message: types.Message):
 async def organization_input(message: types.Message, state: FSMContext):
     user_id=message.from_user.id
     org_name=message.text
-    if org_name in Users.get(user_id):
+    if org_name_check(user_id,org_name):
         await message.answer('В базе уже есть логин пароль от этого сервиса, хотите заменить? Да/Нет')
         await state.update_data({ 'organization' : org_name })
         await Input.choise.set()
@@ -105,7 +102,7 @@ async def set_new_tuple(message: types.Message, state: FSMContext):
     answer = message.text
     if answer in ['Подтвердить','подтвердить']:
         data = await state.get_data()
-        Users[user_id].update({data['organization']:[data['login'],data['password']]})
+        push_data(user_id,data)
         await message.answer('Данные сохранены')
         await state.finish()
     if answer in ['Сброс','сброс']:
@@ -115,7 +112,7 @@ async def set_new_tuple(message: types.Message, state: FSMContext):
 @dp.message_handler(commands=['get'], state = None)
 async def check_tuples(message: types.Message, state: FSMContext):
     user_id = message.from_user.id
-    if len(Users[user_id]) == 0:
+    if storage_empty(user_id):
         await message.answer('У вас пока нет ни одного сохраненного пароля')
     else:
         await message.answer('Введите название сервиса, от которого необходимо узнать пароль')
@@ -125,9 +122,9 @@ async def check_tuples(message: types.Message, state: FSMContext):
 async def output(message: types.Message,state: FSMContext):
     user_id = message.from_user.id
     org_name = message.text
-    if org_name in Users[user_id].keys():
-        message = await message.answer(f"Логин:{Users.get(user_id).get(org_name)[0]} \n Пароль:{Users.get(user_id).get(org_name)[1]} \n Это сообщение будет удалено в течение минуты, скопируйте логин и пароль в буфер обмена")
-        asyncio.create_task(delete_message(message, exp_time))
+    if org_name_check(user_id,org_name):
+        message = await message.answer(f"Логин:{get_login(user_id,org_name)} \n Пароль:{get_password(user_id,org_name)} \n Это сообщение будет удалено в течение минуты, скопируйте логин и пароль в буфер обмена")
+        asyncio.create_task(delete_message(message, 60))
     else:
         await message.answer('Сохраненного пароля для такого сервиса не существует, попробуйте использовать /all, чтобы узнать все сервисы, пароли от которых сохранены')
     await state.finish()
@@ -135,7 +132,7 @@ async def output(message: types.Message,state: FSMContext):
 @dp.message_handler(commands=['del'], state = None)
 async def check_tuples(message: types.Message, state: FSMContext):
     user_id = message.from_user.id
-    if len(Users[user_id]) == 0:
+    if storage_empty(user_id):
         await message.answer('У вас пока нет ни одного сохраненного пароля')
     else:
         await message.answer('Введите название сервиса, пароль от которого необходимо удалить')
@@ -145,7 +142,7 @@ async def check_tuples(message: types.Message, state: FSMContext):
 async def check_tuples(message: types.Message, state: FSMContext):
     user_id = message.from_user.id
     org_name = message.text
-    if org_name in Users[user_id]:
+    if org_name_check(user_id,org_name):
         await state.update_data({ 'organization' : org_name })
         await message.answer('Вы точно хотите удалить информацию о данном сервисе? Да/Нет')
         await Delete.choise.set()
@@ -159,7 +156,7 @@ async def check_tuples(message: types.Message, state: FSMContext):
     answer = message.text
     if answer in ['Да','да']:
         data = await state.get_data()
-        Users[user_id].pop(data['organization'])
+        pop_data(user_id,data)
         await message.answer('Данные удалены')
         await state.finish()
     elif answer in ['Нет','нет']:
@@ -169,27 +166,20 @@ async def check_tuples(message: types.Message, state: FSMContext):
 @dp.message_handler(commands=['all'])
 async def check_tuples(message: types.Message, state: FSMContext):
     user_id = message.from_user.id
-    if len(Users[user_id]) == 0:
+    if storage_empty(user_id):
         await message.answer('У вас пока нет ни одного сохраненного пароля')
     else:    
         await message.answer(f'Пароли сохранены для сервисов:')
-        for orgs in Users[user_id].keys():
+        for orgs in get_all_orgs(user_id):
             await message.answer(orgs)
     
 @dp.message_handler(commands = ['help'])
 async def set_new_service(message: types.Message):
     await message.answer(entertext)
 
-@dp.message_handler(commands = ['set_exp_time'], state=None)
-async def set_new_service(message: types.Message, state: FSMContext):
-    await message.answer('Введите время видимости сообщения с паролем в секундах')
-    await Settime.input.set()
-
-@dp.message_handler(state=Settime.input)
-async def set_new_service(message: types.Message, state: FSMContext):
-    text = message.text 
-
-
+@dp.message_handler(commands = ['set_exp_time'])
+async def set_new_service(message: types.Message):
+    await message.answer(entertext)
 
 
 if __name__ == '__main__':

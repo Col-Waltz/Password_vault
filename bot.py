@@ -1,6 +1,6 @@
 import time
 import logging
-from storage_python import new_user,add_new_user,org_name_check,push_data,storage_empty,get_login,get_password,pop_data,get_all_orgs
+from storage_sqlite import new_user,add_new_user,org_name_check,push_data,storage_empty,get_login,get_password,pop_data,get_all_orgs
 
 import asyncio
 from contextlib import suppress
@@ -123,7 +123,7 @@ async def output(message: types.Message,state: FSMContext):
     user_id = message.from_user.id
     org_name = message.text
     if org_name_check(user_id,org_name):
-        message = await message.answer(f"Логин:{get_login(user_id,org_name)} \n Пароль:{get_password(user_id,org_name)} \n Это сообщение будет удалено в течение минуты, скопируйте логин и пароль в буфер обмена")
+        message = await message.answer(f"Логин: {get_login(user_id,org_name)} \n Пароль: {get_password(user_id,org_name)} \n Это сообщение будет удалено в течение минуты, скопируйте логин и пароль в буфер обмена")
         asyncio.create_task(delete_message(message, 60))
     else:
         await message.answer('Сохраненного пароля для такого сервиса не существует, попробуйте использовать /all, чтобы узнать все сервисы, пароли от которых сохранены')
